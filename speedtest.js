@@ -63,9 +63,6 @@ const TEST_SERVERS = {
 
 // CDN ping endpoints
 const PING_ENDPOINTS = [
-  { name: 'Cloudflare DNS', url: 'https://1.1.1.1/dns-query'},
-  { name: 'Google DNS', url: 'https://dns.google/resolve' },
-  { name: 'Cloudflare CDN', url: 'https://wwwш.cloudflare.com/cdn-cgi/trace' },
   { name: 'Google CDN', url: 'https://www.gstatic.com/generate_204' },
   { name: 'Facebook CDN', url: 'https://www.facebook.com/favicon.ico' },
   { name: 'Cloudflare Check', url: 'https://cp.cloudflare.com/'},
@@ -77,7 +74,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     proxy: null,
-    servers: ['cloudflare'],
+    servers: ['cachefly'],
     sizes: null,
     json: false,
     ping: false,
@@ -332,9 +329,9 @@ function displayResults(results) {
   console.log(doubleSeparator);
 
   // Header
-  console.log(`${colors.bright}┌${'─'.repeat(30)}┬${'─'.repeat(8)}┬${'─'.repeat(12)}┬${'─'.repeat(10)}┬${'─'.repeat(10)}┐${colors.reset}`);
-  console.log(`${colors.bright}│${colors.cyan} Server${' '.repeat(23)}${colors.bright}│${colors.cyan} Ping   ${colors.bright}│${colors.cyan} Speed(Mbps)${colors.bright}│${colors.cyan} MB/s     ${colors.bright}│${colors.cyan} Time     ${colors.bright}│${colors.reset}`);
-  console.log(`${colors.bright}├${'─'.repeat(30)}┼${'─'.repeat(8)}┼${'─'.repeat(12)}┼${'─'.repeat(10)}┼${'─'.repeat(10)}┤${colors.reset}`);
+  console.log(`${colors.bright}┌${'─'.repeat(30)}┬${'─'.repeat(12)}┬${'─'.repeat(10)}┬${'─'.repeat(10)}┐${colors.reset}`);
+  console.log(`${colors.bright}│${colors.cyan} Server${' '.repeat(23)}${colors.bright}│${colors.cyan} Speed(Mbps)${colors.bright}│${colors.cyan} MB/s     ${colors.bright}│${colors.cyan} Time     ${colors.bright}│${colors.reset}`);
+  console.log(`${colors.bright}├${'─'.repeat(30)}┼${'─'.repeat(12)}┼${'─'.repeat(10)}┼${'─'.repeat(10)}┤${colors.reset}`);
 
   // Data rows
   results.forEach(result => {
@@ -346,18 +343,11 @@ function displayResults(results) {
                         result.speedMbps > 50 ? colors.green :
                         result.speedMbps > 10 ? colors.yellow : colors.red;
       
-      const pingColor = !result.ping ? colors.dim :
-                       result.ping < 50 ? colors.brightGreen :
-                       result.ping < 100 ? colors.green :
-                       result.ping < 200 ? colors.yellow : colors.red;
-      
-      const pingStr = result.ping ? `${result.ping.toFixed(0)}ms` : 'N/A';
-      
-      console.log(`${colors.bright}│${colors.white} ${result.name.padEnd(29)}${colors.bright}│${pingColor} ${pingStr.padEnd(7)}${colors.bright}│${speedColor} ${result.speedMbps.toFixed(2).padEnd(11)}${colors.bright}│${colors.white} ${result.speedMBps.toFixed(2).padEnd(9)}${colors.bright}│${colors.cyan} ${result.duration.toFixed(2)}s${' '.repeat(8 - result.duration.toFixed(2).length)}${colors.bright}│${colors.reset}`);
+      console.log(`${colors.bright}│${colors.white} ${result.name.padEnd(29)}${colors.bright}│${speedColor} ${result.speedMbps.toFixed(2).padEnd(11)}${colors.bright}│${colors.white} ${result.speedMBps.toFixed(2).padEnd(9)}${colors.bright}│${colors.cyan} ${result.duration.toFixed(2)}s${' '.repeat(8 - result.duration.toFixed(2).length)}${colors.bright}│${colors.reset}`);
     }
   });
 
-  console.log(`${colors.bright}└${'─'.repeat(30)}┴${'─'.repeat(8)}┴${'─'.repeat(12)}┴${'─'.repeat(10)}┴${'─'.repeat(10)}┘${colors.reset}`);
+  console.log(`${colors.bright}└${'─'.repeat(30)}┴${'─'.repeat(12)}┴${'─'.repeat(10)}┴${'─'.repeat(10)}┘${colors.reset}`);
 }
 
 // Display statistics
@@ -443,10 +433,9 @@ function displayStatistics(results) {
 export class SpeedTest {
   constructor(options = {}) {
     this.options = {
-      servers: options.servers || ['cloudflare'],
+      servers: options.servers || ['cachefly'],
       sizes: options.sizes || null,
       proxy: options.proxy || null,
-      ping: options.ping !== false  // Always true by default
     };
 
     // Convert sizes to numbers if needed
@@ -496,7 +485,6 @@ export class SpeedTest {
       stats.bestServer = validResults.find(r => r.speedMbps === stats.maxSpeed)?.name;
       stats.worstServer = validResults.find(r => r.speedMbps === stats.minSpeed)?.name;
     }
-
     return {
       results,
       statistics: stats
@@ -541,8 +529,6 @@ ${colors.bright}Options:${colors.reset}
   
   --proxy=URL       SOCKS proxy URL (e.g., socks5://127.0.0.1:1080)
   
-  --ping            Include ping tests for each server
-  
   --json, -j        Output results as JSON
   
   --help, -h        Show this help
@@ -586,13 +572,11 @@ ${colors.bright}Environment:${colors.reset}
   if (!options.json) {
     const separator = colors.bright + '═'.repeat(60) + colors.reset;
     console.log(separator);
-    console.log(`${colors.brightCyan}🚀 Speed Test (NodeJS ESM)${colors.reset}`);
+    console.log(`${colors.brightCyan}🚀 Speed Test${colors.reset}`);
     if (options.proxy) {
       console.log(`${colors.yellow}🔐 Using proxy: ${options.proxy}${colors.reset}`);
     }
-    if (options.ping) {
-      console.log(`${colors.green}📡 Ping tests enabled${colors.reset}`);
-    }
+
     console.log(separator);
   }
 
@@ -630,11 +614,6 @@ ${colors.bright}Environment:${colors.reset}
     displayResults(results);
     displayStatistics(results);
 
-    // Show usage tips
-    console.log(`\n${colors.dim}${'═'.repeat(76)}${colors.reset}`);
-    console.log(`${colors.bright}💡 Proxy usage examples:${colors.reset}`);
-    console.log(`   ${colors.cyan}node speedtest.mjs --proxy=socks5://127.0.0.1:1080${colors.reset}`);
-    console.log(`   ${colors.cyan}node speedtest.mjs socks://user:pass@proxy.com:1080${colors.reset}`);
   }
 }
 
